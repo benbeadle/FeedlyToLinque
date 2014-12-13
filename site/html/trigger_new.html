@@ -1,0 +1,34 @@
+<style type="text/css">
+    .body-content {
+        max-width: 500px;
+        margin: auto;
+    }
+    .btn-submit {
+    	width: 100px;
+    }
+</style>
+<div class="body-content">
+    <h3 class="center">Create a Trigger</h3>
+	<div class="alert alert-info center">{{ trigger_desc }}</div>
+	{% if error %}
+    <div class="alert alert-danger center">{{ error }}</div>
+    {% endif %}
+    <form role="form" method="POST" action="/app/new/{{ trigger_cls_id }}">
+    	<input type="hidden" name="enable" value="on" />
+		<div class="form-group">
+			<label>Short Trigger Description</label>
+			<input type="text" class="form-control" placeholder="Trigger Description" name="user_desc" value="{{ user_desc }}">
+		</div>
+		<div class="form-group">
+			<label>Device Name (Optional)</label>
+			<input type="text" class="form-control" placeholder="Device Name (Optional)" name="device_name" value="{{ device_name }}">
+			<p class="help-block">You can enter a device name if you want to <a href="https://www.linque.me/faq#whatdoeslinqueingadevicedo" target="_blank">linque the device directly</a>.</p>
+		</div>
+		{{ trigger_fields|safe }}
+		<div class="row">
+			<div class="col-md-12 text-center">
+				<button type="submit" class="btn btn-success btn-submit">Create</button>
+			</div>
+		</div>
+	</form>
+</div>

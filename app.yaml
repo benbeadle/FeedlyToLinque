@@ -1,0 +1,44 @@
+#
+# This file gives GAE information, such as what handlers
+# to process requests.
+#
+application: feedlytolinque
+version: 1
+api_version: 1
+runtime: python27
+threadsafe: true
+
+libraries:
+- name: webapp2
+  version: "2.5.2"
+- name: pycrypto
+  version: latest
+- name: endpoints
+  version: 1.0
+- name: ssl
+  version: latest
+
+handlers:
+########################
+# STATIC FILE HANDLERS #
+########################
+- url: /css
+  static_dir: site/css
+- url: /js
+  static_dir: site/js
+- url: /img
+  static_dir: site/img
+- url: /favicon\.ico
+  static_files: favicon.ico
+  upload: favicon\.ico
+
+################
+# WEB HANDLERS #
+################
+#- url: /cron/logging_check
+#  script: handlers.cron.logging_check.app
+#  secure: always
+
+- url: /.*
+  script: handlers.site.app
+  secure: always

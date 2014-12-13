@@ -1,0 +1,51 @@
+<style type="text/css">
+    .body-content {
+        max-width: 500px;
+        margin: auto;
+    }
+    .trigger-img {
+        width: 30px;
+        height: 30px;
+        margin-top: 5px;
+    }
+</style>
+<div class="body-content">
+    <h3 class="center">Your Triggers</h3>
+
+    <div class="list-group">
+    {% for trigger in triggers %}
+    <a href="/app/edit/{{ trigger.id }}" class="list-group-item {% if trigger.enabled %}list-group-item-success{% else %}list-group-item-danger{% endif %}">
+        <div class="row hidden-xs">
+            <div class="col-xs-1">
+                <img class="trigger-img" src="/img/triggers/{{ trigger.cls_id }}.png" />
+            </div>
+            <div class="col-xs-11">
+                <h4 class="list-group-item-heading">{{ trigger.cls_name }}
+                {% if trigger.device_name != "" %}
+                &nbsp;&nbsp;&rarr;&nbsp;&nbsp;{{ trigger.device_name }}
+                {% endif %}
+                </h4>
+                <p class="list-group-item-text">{{ trigger.description }}</p>
+            </div>
+        </div>
+        <div class="row visible-xs">
+            <div class="col-xs-2">
+                <img class="trigger-img" src="/img/triggers/{{ trigger.cls_id }}.png" />
+            </div>
+            <div class="col-xs-10">
+                <h4 class="list-group-item-heading">{{ trigger.cls_name }}
+                {% if trigger.device_name != "" %}
+                &nbsp;&nbsp;&rarr;&nbsp;&nbsp;{{ trigger.device_name }}
+                {% endif %}
+                </h4>
+                <p class="list-group-item-text">{{ trigger.description }}</p>
+            </div>
+        </div>
+    </a>
+    {% endfor %}
+    </div>
+
+    <div class="center">
+        <a href="/app/new" class="btn btn-primary btn-lg">Create Trigger</a>
+    </div>
+</div>

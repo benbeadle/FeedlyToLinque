@@ -1,0 +1,36 @@
+<style type="text/css">
+    .body-content {
+        max-width: 500px;
+        margin: auto;
+    }
+    .btn-save {
+    	width: 200px;
+    }
+</style>
+<div class="body-content">
+    <h3 class="center">Settings</h3>
+    {% if error %}
+    <div class="alert alert-danger center">{{ error }}</div>
+    {% endif %}
+    <form role="form" method="POST" action="/app/settings">
+		<div class="form-group">
+			<label>First Name</label>
+			<input type="text" class="form-control" placeholder="First Name" name="first_name" value="{{ first_name }}">
+		</div>
+		<div class="form-group">
+			<label>Email Address</label>
+			<input type="email" class="form-control" placeholder="Email Address" name="email_address" value="{{ email_address }}">
+			<p class="help-block">Used notify you if something has gone wrong.</p>
+		</div>
+		<div class="form-group">
+			<label>Linque API Key</label>
+			<input type="text" class="form-control" placeholder="Linque API Key" name="linque_api_key" value="{{ linque_api_key }}">
+			<p class="help-block">Used to linque you articles. Found under Settings in Linque.</p>
+		</div>
+		<div class="row">
+			<div class="col-md-12 text-center">
+				<button type="submit" class="btn btn-success btn-save">Save</button>
+			</div>
+		</div>
+	</form>
+</div>

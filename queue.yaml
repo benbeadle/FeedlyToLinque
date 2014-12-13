@@ -1,0 +1,9 @@
+#
+# This file informs GAE of the different queues which process data in the background
+#
+total_storage_limit: 500M
+queue:
+#- name: jotform
+#  rate: 1/s
+#  mode: push
+#  bucket_size: 5

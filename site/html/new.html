@@ -1,0 +1,29 @@
+<style type="text/css">
+    .body-content {
+        max-width: 500px;
+        margin: auto;
+    }
+    .trigger-img {
+    	width: 20px;
+    	height: 20px;
+    }
+</style>
+<div class="center body-content">
+    <h3>Create a Trigger</h3>
+    <div class="well">
+	    <h5>When there's a...</h5>
+	    <div class="list-group">
+	    	{% for trigger_id, trigger in triggers.items %}
+			<a href="/app/new/{{ trigger_id }}" class="list-group-item">
+				<div class="row">
+					<div class="col-xs-1">
+						<img class="trigger-img" src="/img/triggers/{{ trigger_id }}.png" />
+					</div>
+					<div class="col-xs-9">{{ trigger.description }}</div>
+					<div class="col-xs-1 pull-right">&rarr;</div>
+				</div>
+			</a>
+			{% endfor %}
+		</div>
+	</div>
+</div>

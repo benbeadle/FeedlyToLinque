@@ -1,0 +1,70 @@
+<b>INFORM THEM OF NON-PRO ACCOUNT LIMITATIONS</b>
+<div class="form-group">
+	<label>Source</label>
+	<select class="form-control" name="source">
+		{% if sources|length > 0 %}
+		{% for source in sources %}
+		<option value="" disabled>{{ source.0 }}</option>
+		{% for the_source in source.1 %}
+		<option value="{{ the_source.id }}" {% if trigger.source == the_source.id %}selected{% endif %}>&nbsp;&nbsp;&nbsp;&nbsp;{{ the_source.label }}</option>
+		{% endfor %}
+		{% endfor %}
+		{% endif %}
+	</select>
+	<p class="help-block">Choose which source you'd like to search. For more info on the global sources, look at the <a href="http://developer.feedly.com/v3/#global-resource-ids" target="_blank">global resource IDs</a>. To search your entire feedly, select "All Articles".</p>
+</div>
+<div class="form-group">
+	<label>Query</label>
+	<input type="text" class="form-control" placeholder="Search Query" name="feedly_query" value="{{ trigger.feedly_query }}">
+	<p class="help-block">The search query. See the <a href="http://feedly.uservoice.com/knowledgebase/articles/441699-power-search-tutorial" target="_blank">search tutorial</a> for syntax.</p>
+</div>
+<div class="form-group">
+	<label>Fields</label>
+	<div class="checkbox">
+		<label class="checkbox-inline">
+			<input type="checkbox" name="field_title" {% if 'title' in trigger.fields %}checked="checked"{% endif %}> Title
+		</label>
+		<label class="checkbox-inline">
+			<input type="checkbox" name="field_author" {% if 'author' in trigger.fields %}checked="checked"{% endif %}> Author
+		</label>
+		<label class="checkbox-inline">
+			<input type="checkbox" name="field_keywords" {% if 'keywords' in trigger.fields %}checked="checked"{% endif %}> Keywords
+		</label>
+	</div>
+	<p class="help-block">Which fields to use for matching. To search all fields (the default), you can select none of them or all of them.</p>
+</div>
+<div class="form-group">
+	<label>Embedded</label>
+	<select class="form-control" name="embedded">
+		<option value="">Don't filter by embedded</option>
+		<option value="audio" {% if trigger.embedded == 'audio' %}selected{% endif %}>Audio</option>
+		<option value="video" {% if trigger.embedded == 'video' %}selected{% endif %}>Video</option>
+		<option value="any" {% if trigger.embedded == 'any' %}selected{% endif %}>Any</option>
+	</select>
+	<p class="help-block">Limit results to also include this media type. "Any" means the article must contain at least one embed.</p>
+</div>
+<div class="form-group">
+	<label>Engagement</label>
+	<select class="form-control" name="engagement">
+		<option value="">Don't filter by engagement</option>
+		<option value="medium" {% if trigger.engagement == 'medium' %}selected{% endif %}>Medium</option>
+		<option value="high" {% if trigger.engagement == 'high' %}selected{% endif %}>High</option>
+	</select>
+	<p class="help-block">Limit results to articles that have the specified engagement.</p>
+</div>
+<div class="form-group">
+	<label>Only Unread</label>
+	<div class="checkbox">
+		<label>
+			<input type="checkbox" name="only_unread" {% if trigger.only_unread or creating %}checked="checked"{% endif %}> Only search unread articles.
+		</label>
+	</div>
+</div>
+<div class="form-group">
+	<label>Mark Article As Read</label>
+	<div class="checkbox">
+		<label>
+			<input type="checkbox" name="mark_as_read" {% if trigger.mark_as_read or creating %}checked="checked"{% endif %}> Mark article as read after linqueing.
+		</label>
+	</div>
+</div>

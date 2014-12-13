@@ -1,0 +1,49 @@
+<style type="text/css">
+    .body-content {
+        max-width: 500px;
+        margin: auto;
+    }
+    .btn-submit {
+    	width: 100px;
+    }
+</style>
+<div class="body-content">
+    <h3 class="center">Edit Trigger</h3>
+	<div class="alert alert-info center">{{ trigger.cls_description }}</div>
+	{% if error %}
+    <div class="alert alert-danger center">{{ error }}</div>
+    {% endif %}
+    <form role="form" method="POST" action="/app/edit/{{ trigger.id }}">
+		<div class="checkbox">
+			<label>
+				<input type="checkbox" name="enable" {% if trigger.enabled %}checked="checked"{% endif %}> Enable trigger. Uncheck to disable.
+			</label>
+		</div>
+		<div class="form-group">
+			<label>Short Trigger Description</label>
+			<input type="text" class="form-control" placeholder="Trigger Description" name="user_desc" value="{{ trigger.description }}">
+		</div>
+		<div class="form-group">
+			<label>Device Name (Optional)</label>
+			<input type="text" class="form-control" placeholder="Device Name (Optional)" name="device_name" value="{{ trigger.device_name }}">
+			<p class="help-block">You can enter a device name if you want to <a href="https://www.linque.me/faq#whatdoeslinqueingadevicedo" target="_blank">linque the device directly</a>.</p>
+		</div>
+		{{ trigger_fields|safe }}
+		<div class="row">
+			<div class="col-md-12 text-center">
+				<input id="triggerAction" type="hidden" name="trigger_action" value="save" />
+				<a href="/app" class="btn btn-info btn-submit">Cancel</a>
+				<button id="buttonSubmit" type="submit" class="btn btn-success btn-submit" name="submit_save">Save</button>
+				<a href="#" id="deleteTrigger" class="btn btn-danger btn-submit">Delete</a>
+			</div>
+		</div>
+	</form>
+</div>
+<script type="text/javascript">
+	$("#deleteTrigger").click(function() {
+		if(confirm("Are you sure you want to delete this trigger?")) {
+			$("#triggerAction").val("delete");
+			$("#buttonSubmit").click();
+		}
+	});
+</script>
