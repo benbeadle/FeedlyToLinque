@@ -4,7 +4,7 @@
 </div>
 {% endif %}
 <div class="form-group">
-	<label>Source</label>
+	<label>Stream</label>
 	<select id="sourceFilter" class="form-control" name="source">
 		{% if sources|length > 0 %}
 		{% for source in sources %}
@@ -23,7 +23,7 @@
 	<p class="help-block">The search query. See the <a href="http://feedly.uservoice.com/knowledgebase/articles/441699-power-search-tutorial" target="_blank">search tutorial</a> for syntax.</p>
 	<p class="help-block"><a id="testQuery" href="#">Click here</a> to test your query in a new tab (only tests the query, not other settings).</p>
 </div>
-<div id="localeFilter" class="form-group">
+<div class="form-group popular-only">
 	<label>Locale (Optional)</label>
 	<input type="text" class="form-control" placeholder="Locale" name="locale" value="{{ trigger.locale }}">
 	<p class="help-block">This is used to filter results by locale when searching the most popular 50,000 feeds in Feedly.</p>
@@ -62,7 +62,7 @@
 	</select>
 	<p class="help-block">Limit results to articles that have the specified engagement.</p>
 </div>
-<div id="onlyUnreadFilter" class="form-group">
+<div class="form-group popular-hide">
 	<label>Only Unread</label>
 	<div class="checkbox">
 		<label>
@@ -70,13 +70,14 @@
 		</label>
 	</div>
 </div>
-<div id="markRead" class="form-group">
-	<label>Mark Article As Read</label>
+<div class="form-group popular-hide">
+	<label>Mark Article As Read/Unsaved</label>
 	<div class="checkbox">
 		<label>
-			<input type="checkbox" name="mark_as_read" {% if trigger.mark_as_read or creating %}checked="checked"{% endif %}> Mark article as read after linqueing.
+			<input type="checkbox" name="mark_as_read" {% if trigger.mark_as_read or creating %}checked="checked"{% endif %}> Mark article as read/unsaved after linqueing.
 		</label>
 	</div>
+	<p class="help-block">If the source is your Saved for Later stream, then articles will be unsaved instead marked as read.</p>
 </div>
 <script type="text/javascript">
 	$("#testQuery").click(function() {
@@ -89,13 +90,11 @@
 		var bTopicPopular = $("#sourceFilter").val() == "topic/global.popular";
 
 		if(bTopicPopular) {
-			$("#localeFilter").show();
-			$("#onlyUnreadFilter").hide();
-			$("#markRead").hide();
+			$(".popular-only").show();
+			$(".popular-hide").hide();
 		} else {
-			$("#localeFilter").hide();
-			$("#onlyUnreadFilter").show();
-			$("#markRead").show();
+			$(".popular-only").hide();
+			$(".popular-hide").show();
 		}
 	}
 	sourceChange();

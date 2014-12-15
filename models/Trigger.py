@@ -146,21 +146,15 @@ class Trigger(polymodel.PolyModel):
 	def create(cls, feedler, user_desc, device_name, request):
 		link_desc = request.get("link_description", "")
 		trigger = cls(parent=feedler.key, description=user_desc, device_name=device_name, link_description=link_desc)
-		trigger, err = cls._create(trigger, request)
 
-		if err != "":
-			return err
-
-		trigger.put()
-
-		return ""
+		return trigger
 
 	#Grab all the Trigger types and get their description to show to the user
 	#when creating a new Trigger
 	@classmethod
 	def triggers_to_json(cls):
 		triggers = {}
-		subclasses = [NewCategoryArticle, SavedForLater, NewArticleFromSearch]
+		subclasses = [NewArticleInStream, SavedForLater, NewArticleFromSearch]
 		for TriggerCls in subclasses:
 			triggers[TriggerCls.cls_id] = {
 				"description": TriggerCls.cls_description,
@@ -244,25 +238,35 @@ class SavedForLater(Trigger):
 	def customize_params(self, feedler, params):
 		pass
 
-#Check if there's a new article in a given category
-class NewCategoryArticle(Trigger):
-	cls_name = "Article in Category"
-	cls_id = "nca"
-	cls_description = "New article from category"
+#Check if there's a new article in a given stream
+class NewArticleInStream(Trigger):
+	cls_name = "Article in Stream"
+	cls_id = "nais"
+	cls_description = "New article in category, topic, tag or subscriptions"
+	
+	#Only search for unread articles
+	only_unread = ndb.BooleanProperty('ou', default=True, indexed=False)
 	
 	#Allows the user to automatically mark the articles as read (so they don't see them in Feedly)
 	mark_as_read = ndb.BooleanProperty('mar', default=False, indexed=False)
 
 	#The category the user wants to track
-	category_id = ndb.StringProperty('ci', required=True, indexed=False)
+	stream_id = ndb.StringProperty('si', required=True, indexed=False)
+
+	@property
+	def is_popular_source(self):
+		return self.source == "topic/global.popular"
 
 	#Custom run method for this Trigger type
 	def _run(self, newer_than):
 		feedler = self.feedler
 		feedly_api = feedler.feedly_api
 
+		is_popular = self.is_popular_source
+		only_unread = self.only_unread if is_popular else False
+
 		#Grab the articles from Feedly in the category
-		data = feedler.feedly_api.get_feed_content(self.category_id, True, newer_than)
+		data = feedler.feedly_api.get_feed_content(self.category_id, only_unread, newer_than)
 
 		#Process the articles if some were found
 		item_len = 0 if "items" not in data else len(data["items"])
@@ -288,8 +292,8 @@ class NewCategoryArticle(Trigger):
 
 				article_ids.append(article_id)
 
-			#Mark the articles as read
-			if self.mark_as_read and len(article_ids) > 0:
+			#Mark the articles as read/unsaved
+			if not is_popular and self.mark_as_read and len(article_ids) > 0:
 				feedly_api.mark_article_read(article_ids)
 
 			#Since they were called asyncrounsly to save time,
@@ -303,17 +307,48 @@ class NewCategoryArticle(Trigger):
 	#Validate the custom data to this Trigger type
 	def _validate_and_save(self, request):
 		self.mark_as_read = request.get("mark_as_read", "off") == "on"
-		self.category_id = request.get("category", "")
+		self.only_unread = request.get("only_unread", "off") == "on"
+		self.stream_id = request.get("source", "")
 
-		if self.category_id == "":
-			return "Please select a Feedly category"
+		if self.stream_id == "":
+			return "Please select a Stream Source"
 
 		return ""
 
 	#This Trigger needs a list of categories in the Feedler's account
 	@classmethod
 	def customize_params(self, feedler, params):
-		params["categories"] = feedler.all_categories()
+
+		#All of the user's data is done asynchronously
+		#instead of in serial to save page loading time
+
+		subscriptions = feedler.all_subscriptions_async()
+		categories = feedler.all_categories_async()
+		tags = feedler.all_tags_async()
+		topics = feedler.all_topics_async()
+
+		#Don't show the Saved For Later global since another Trigger was
+		#designed for that
+		sfl_global = feedler.get_global_saved()
+		global_streams = [g for g in feedler.all_globals() if g["id"] != sfl_global]
+		logging.info(global_streams)
+
+		sources = [["Globals", global_streams]]
+
+		categories = categories.get_result()
+		if len(categories) > 0:
+			sources.append(["Categories", categories])
+		tags = tags.get_result()
+		if len(tags) > 0:
+			sources.append(["Tags", tags])
+		topics = topics.get_result()
+		if len(topics) > 0:
+			sources.append(["Topics", topics])
+		subscriptions = subscriptions.get_result()
+		if len(subscriptions) > 0:
+			sources.append(["Subscriptions", subscriptions])
+
+		params["sources"] = sources
 
 #Find new articles based on a search
 class NewArticleFromSearch(Trigger):
@@ -385,8 +420,13 @@ class NewArticleFromSearch(Trigger):
 				article_ids.append(article_id)
 
 			#Don't mark read if searching popular
-			if is_popular and self.mark_as_read and len(article_ids) > 0:
-				feedly_api.mark_article_read(article_ids)
+			if not is_popular and self.mark_as_read and len(article_ids) > 0:
+				#If this is the Saved For Later stream, then we unsave them
+				#vs mark them as read!
+				if self.source != feedler.get_global_saved():
+					feedly_api.mark_article_read(article_ids)
+				else:
+					feedly_api.mark_article_unsaved(article_ids)
 
 			#Since they were called asyncrounsly to save time,
 			#make sure they all finished now

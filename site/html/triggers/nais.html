@@ -1,0 +1,46 @@
+<div class="form-group">
+	<label>Stream</label>
+	<select id="sourceFilter" class="form-control" name="source">
+		{% if sources|length > 0 %}
+		{% for source in sources %}
+		<option value="" disabled>{{ source.0 }}</option>
+		{% for the_source in source.1 %}
+		<option value="{{ the_source.id }}" {% if trigger.source == the_source.id %}selected{% endif %}>&nbsp;&nbsp;&nbsp;&nbsp;{{ the_source.label }}</option>
+		{% endfor %}
+		{% endfor %}
+		{% endif %}
+	</select>
+	<p class="help-block">Choose which source you'd like to search. For more info on the global sources, look at the <a href="http://developer.feedly.com/v3/#global-resource-ids" target="_blank">global resource IDs</a>. To search your entire feedly, select "All Articles".</p>
+</div>
+<div class="form-group popular-hide">
+	<label>Only Unread</label>
+	<div class="checkbox">
+		<label>
+			<input type="checkbox" name="only_unread" {% if trigger.only_unread or creating %}checked="checked"{% endif %}> Only search unread articles.
+		</label>
+	</div>
+</div>
+<div class="form-group">
+	<label>Mark Article As Read</label>
+	<div class="checkbox">
+		<label>
+			<input type="checkbox" name="mark_as_read" {% if trigger.mark_as_read or creating %}checked="checked"{% endif %}> Mark article as read after linqueing.
+		</label>
+	</div>
+</div>
+<script type="text/javascript">
+
+	function sourceChange() {
+		var bTopicPopular = $("#sourceFilter").val() == "topic/global.popular";
+
+		if(bTopicPopular) {
+			$(".popular-only").show();
+			$(".popular-hide").hide();
+		} else {
+			$(".popular-only").hide();
+			$(".popular-hide").show();
+		}
+	}
+	sourceChange();
+	$("#sourceFilter").change(sourceChange);
+</script>
