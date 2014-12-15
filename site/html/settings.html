@@ -27,6 +27,11 @@
 			<input type="text" class="form-control" placeholder="Linque API Key" name="linque_api_key" value="{{ linque_api_key }}">
 			<p class="help-block">Used to linque you articles. Found under Settings in Linque.</p>
 		</div>
+		<div class="checkbox">
+			<label>
+				<input type="checkbox" name="receive_updates" {% if receive_updates %}checked{% endif %}> Email me occasional updates like new features. You won't be spammed! :-)
+			</label>
+		</div>
 		<div class="row">
 			<div class="col-md-12 text-center">
 				<button type="submit" class="btn btn-success btn-save">Save</button>

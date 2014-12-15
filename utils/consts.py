@@ -44,6 +44,7 @@ def render_template(handler, page_name, params={}):
     params["root"] = handler.request.host_url
     params["js"] = params["css"] = ""
     params["page_name"] = page_name
+    params["is_dev"] = "true" if IS_DEV else "false"
 
     #Add another navbar dropdown on the development server
     #for easy access to the SDK console and dataviewer

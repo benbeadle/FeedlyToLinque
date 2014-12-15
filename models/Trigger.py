@@ -31,6 +31,8 @@ class Trigger(polymodel.PolyModel):
 	#(not on Android/iOS), so give them the option to linque a device directly
 	device_name = ndb.StringProperty('dn', default="", indexed=False)
 
+	link_description = ndb.StringProperty('ld', default="%article_title%", indexed=False)
+
 	#Allows the Feedler to disable Triggers (not run) without having to delete
 	#them
 	enabled = ndb.BooleanProperty('e', default=True, indexed=True)
@@ -60,7 +62,17 @@ class Trigger(polymodel.PolyModel):
 	#API understances
 	@property
 	def newer_than(self):
+		#This shouldn't happen, but happened during development so just in case
+		if self.last_run is None:
+			return 0
 		return to_unix(self.last_run)
+
+	def get_link_description(self, article):
+		title = article["title"]
+		ld = self.link_description.replace("%article_title%", title)
+		if ld == "":
+			return title
+		return ld
 
 	#Shortcut to delete the Trigger
 	def delete(self):
@@ -79,6 +91,20 @@ class Trigger(polymodel.PolyModel):
 	def run_block(self, update_last=True):
 		result = self._run()
 
+		#If there was an error, then disable the Trigger and email the Feedler
+		#But only disable if the error is not that the Feedly account is not long authorized
+		if "errorCode" in result and result["errorCode"] != 401:
+			message = result["errorMessage"] if "errorMessage" in result else ("Unknown Error: %d" % result["errorCode"])
+			self.enabled = False
+
+			Emailer.trigger_error(self, message)
+
+			#If we are updating the last run, then no need to save it now
+			#since it'll be saved in update_last_run
+			#This reduces saves to the datastore
+			if not update_last:
+				self.put()
+
 		if update_last:
 			self.update_last_run()
 
@@ -92,6 +118,7 @@ class Trigger(polymodel.PolyModel):
 	def validate_and_save(self, request):
 		self.description = request.get("user_desc", "")
 		self.device_name = request.get("device_name", "")
+		self.link_description = request.get("link_description", "")
 		self.enabled = request.get("enable", "off") == "on"
 
 		#Calling the submethod first ensures ALL trigger
@@ -112,7 +139,8 @@ class Trigger(polymodel.PolyModel):
 	#save custom data from the request that's only used for that Trigger type
 	@classmethod
 	def create(cls, feedler, user_desc, device_name, request):
-		trigger = cls(parent=feedler.key, description=user_desc, device_name=device_name)
+		link_desc = request.get("link_description", "")
+		trigger = cls(parent=feedler.key, description=user_desc, device_name=device_name, link_description=link_desc)
 		trigger, err = cls._create(trigger, request)
 
 		if err != "":
@@ -175,7 +203,7 @@ class SavedForLater(Trigger):
 			for article in data["items"]:
 
 				article_id = article["id"]
-				title = article["title"]
+				title = self.get_link_description(article)
 				article_url = get_article_url(article)
 
 				#Make sure the article url was found
@@ -198,7 +226,7 @@ class SavedForLater(Trigger):
 				for rpc in rpcs:
 					rpc.wait()
 
-		return item_len
+		return data
 
 	#This trigger processes custom data based on the request
 	def _validate_and_save(self, request):
@@ -241,7 +269,7 @@ class NewCategoryArticle(Trigger):
 			for article in data["items"]:
 
 				article_id = article["id"]
-				title = article["title"]
+				title = self.get_link_description(article)
 				article_url = get_article_url(article)
 
 				#Make sure the url was found
@@ -265,7 +293,7 @@ class NewCategoryArticle(Trigger):
 				for rpc in rpcs:
 					rpc.wait()
 
-		return item_len
+		return data
 
 	#Validate the custom data to this Trigger type
 	def _validate_and_save(self, request):
@@ -300,24 +328,33 @@ class NewArticleFromSearch(Trigger):
 	#Optionally force the article to have medium or high engagement
 	engagement = ndb.StringProperty('eg', default="", indexed=False)
 
+	locale = ndb.StringProperty('eg', default="", indexed=False)
+
 	#Check if the Feedler only wants to search through unread articles
 	only_unread = ndb.BooleanProperty('ou', default=True, indexed=False)
 
 	#Check if the user wants to mark the article as read
 	mark_as_read = ndb.BooleanProperty('mar', default=False, indexed=False)
 
+	@property
+	def is_popular_source(self):
+		return self.source == "topic/global.popular"
+
 	#Run the Trigger to search for the articles
 	def _run(self):
-		pass
 		feedler = self.feedler
 		feedly_api = feedler.feedly_api
 
-		#TODO: Finish this run method for query triggers
-		#TODO: Add a method for trigger.error or something to disable
-		#the trigger and inform them via email an error occurred
+		is_popular = self.is_popular_source
 
-		'''
-		data = feedler.feedly_api.get_feed_content(self.category_id, True, self.newer_than)
+		#Don't filter by unread if searching globally
+		#But DO filter by locale
+		only_unread = self.only_unread if not is_popular else False
+		locale = self.locale if is_popular else ""
+		
+		data = feedler.feedly_api.search_stream(self.source, self.feedly_query, self.newer_than,
+			unread_only=only_unread, fields=self.fields, embedded=self.embedded,
+			enagement=self.engagement, locale=locale)
 
 		item_len = 0 if "items" not in data else len(data["items"])
 
@@ -330,7 +367,7 @@ class NewArticleFromSearch(Trigger):
 			for article in data["items"]:
 
 				article_id = article["id"]
-				title = article["title"]
+				title = self.get_link_description(article)
 				article_url = get_article_url(article)
 
 				if article_url == "":
@@ -342,7 +379,8 @@ class NewArticleFromSearch(Trigger):
 
 				article_ids.append(article_id)
 
-			if self.mark_as_read and len(article_ids) > 0:
+			#Don't mark read if searching popular
+			if is_popular and self.mark_as_read and len(article_ids) > 0:
 				feedly_api.mark_article_read(article_ids)
 
 			#Since they were called asyncrounsly to save time,
@@ -351,13 +389,13 @@ class NewArticleFromSearch(Trigger):
 				for rpc in rpcs:
 					rpc.wait()
 
-		return item_len
-		'''
+		return data
 
 	#This Trigger type has a lot of custom data to validate and save
 	def _validate_and_save(self, request):
 		self.mark_as_read = request.get("mark_as_read", "off") == "on"
 		self.only_unread = request.get("only_unread", "off") == "on"
+		self.locale = request.get("locale", "")
 		self.source = request.get("source", "")
 		self.feedly_query = request.get("feedly_query", "")
 		self.embedded = request.get("embedded", "")

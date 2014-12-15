@@ -28,6 +28,11 @@
 			<input type="text" class="form-control" placeholder="Device Name (Optional)" name="device_name" value="{{ trigger.device_name }}">
 			<p class="help-block">You can enter a device name if you want to <a href="https://www.linque.me/faq#whatdoeslinqueingadevicedo" target="_blank">linque the device directly</a>.</p>
 		</div>
+		<div class="form-group">
+			<label>Link Description (Optional)</label>
+			<input type="text" class="form-control" placeholder="Link Description" name="link_description" value="{{ trigger.link_description }}">
+			<p class="help-block">Enter the description you'd like to accompany the article in Linque. Use <b>%article_title%</b> to inject the article title in the description.</p>
+		</div>
 		{{ trigger_fields|safe }}
 		<div class="row">
 			<div class="col-md-12 text-center">

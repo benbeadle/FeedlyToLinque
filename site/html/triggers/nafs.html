@@ -1,7 +1,7 @@
 <b>INFORM THEM OF NON-PRO ACCOUNT LIMITATIONS</b>
 <div class="form-group">
 	<label>Source</label>
-	<select class="form-control" name="source">
+	<select id="sourceFilter" class="form-control" name="source">
 		{% if sources|length > 0 %}
 		{% for source in sources %}
 		<option value="" disabled>{{ source.0 }}</option>
@@ -15,8 +15,14 @@
 </div>
 <div class="form-group">
 	<label>Query</label>
-	<input type="text" class="form-control" placeholder="Search Query" name="feedly_query" value="{{ trigger.feedly_query }}">
+	<input id="feedlyQuery" type="text" class="form-control" placeholder="Search Query" name="feedly_query" value="{{ trigger.feedly_query }}">
 	<p class="help-block">The search query. See the <a href="http://feedly.uservoice.com/knowledgebase/articles/441699-power-search-tutorial" target="_blank">search tutorial</a> for syntax.</p>
+	<p class="help-block"><a id="testQuery" href="#">Click here</a> to test your query in a new tab (only tests the query, not other settings).</p>
+</div>
+<div id="localeFilter" class="form-group">
+	<label>Locale (Optional)</label>
+	<input type="text" class="form-control" placeholder="Locale" name="locale" value="{{ trigger.locale }}">
+	<p class="help-block">This is used to filter results by locale when searching the most popular 50,000 feeds in Feedly.</p>
 </div>
 <div class="form-group">
 	<label>Fields</label>
@@ -52,7 +58,7 @@
 	</select>
 	<p class="help-block">Limit results to articles that have the specified engagement.</p>
 </div>
-<div class="form-group">
+<div id="onlyUnreadFilter" class="form-group">
 	<label>Only Unread</label>
 	<div class="checkbox">
 		<label>
@@ -60,7 +66,7 @@
 		</label>
 	</div>
 </div>
-<div class="form-group">
+<div id="markRead" class="form-group">
 	<label>Mark Article As Read</label>
 	<div class="checkbox">
 		<label>
@@ -68,3 +74,26 @@
 		</label>
 	</div>
 </div>
+<script type="text/javascript">
+	$("#testQuery").click(function() {
+		var sFeedlyURL = "https://" + (IS_DEV ? "sandbox." : "") + "feedly.com/i/search/";
+		sFeedlyURL += encodeURIComponent($("#feedlyQuery").val());
+		window.open(sFeedlyURL);
+	});
+
+	function sourceChange() {
+		var bTopicPopular = $("#sourceFilter").val() == "topic/global.popular";
+
+		if(bTopicPopular) {
+			$("#localeFilter").show();
+			$("#onlyUnreadFilter").hide();
+			$("#markRead").hide();
+		} else {
+			$("#localeFilter").hide();
+			$("#onlyUnreadFilter").show();
+			$("#markRead").show();
+		}
+	}
+	sourceChange();
+	$("#sourceFilter").change(sourceChange);
+</script>

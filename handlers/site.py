@@ -149,7 +149,8 @@ class AppSettingsHandler(FeedlerHandler):
         params = {
             "first_name": self.feedler.first_name,
             "email_address": self.feedler.email,
-            "linque_api_key": self.feedler.linque_api_key
+            "linque_api_key": self.feedler.linque_api_key,
+            "receive_updates": self.feedler.receive_updates
         }
         self.render_template("settings", params)
 
@@ -157,6 +158,7 @@ class AppSettingsHandler(FeedlerHandler):
         first_name = self.request.get("first_name", "")
         email_address = self.request.get("email_address", "")
         linque_api_key = self.request.get("linque_api_key", "")
+        receive_updates = self.request.get("receive_updates", "off") == "on"
 
         params = {
             "first_name": first_name,
@@ -177,6 +179,7 @@ class AppSettingsHandler(FeedlerHandler):
             self.feedler.first_name = first_name
             self.feedler.email = email_address
             self.feedler.linque_api_key = linque_api_key
+            self.feedler.receive_updates = receive_updates
             self.feedler.put()
 
             self.redirect("/app", abort=True)

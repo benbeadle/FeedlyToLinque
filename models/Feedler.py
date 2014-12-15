@@ -23,13 +23,11 @@ class Feedler(ndb.Model):
     #Stores if they have a pro account or not
     is_pro = ndb.BooleanProperty('ip', required=True, indexed=False)
 
-    #This property is used so we can know if they are authorized or not
-    is_authorized = ndb.BooleanProperty('ia', default=True, indexed=True)
+    receive_updates = ndb.BooleanProperty('ru', default=True, indexed=False)
 
     #Store when they first authorized Feedly
     created = ndb.DateTimeProperty('cr', auto_now_add=True, indexed=False)
 
-    #TODO: Add a setting to see if they want to receive rare updates (like new triggers) via email
     #TODO: Add counters for how many Triggers have been created and how many articles Linqued today / total
 
     #The ID corresponds to their Feedly ID
@@ -41,6 +39,11 @@ class Feedler(ndb.Model):
     @property
     def feedly_api(self):
         return FeedlyAPI(self)
+
+    #Make sure the access token and Linque API Key aren't empty
+    @property
+    def can_run_triggers(self):
+        return (self.access_token != "" and self.linque_api_key != "")
 
     #Return the Triggers the Feedler has created
     def all_triggers(self):
@@ -56,10 +59,10 @@ class Feedler(ndb.Model):
 
     #Mark the account as not authorized (we lost access)
     def set_not_authed(self):
-        self.is_authorized = False
+        self.access_token = ""
         self.put()
 
-        #TODO: Send them an email to let them know they need to re-auth
+        Emailer.need_to_authorize(self)
 
     #
     #   These are a bunch of helper methods to get resource IDs
@@ -161,11 +164,10 @@ class Feedler(ndb.Model):
     @ndb.tasklet
     def all_topics_async(self, use_mem=True):
         topics = yield self._all_resource_async("topics", use_mem)
-        #TODO: support topic/global.popular (requires locale)
-        #topics.append({
-        #    "id": "topic/global.popular",
-        #    "label": "Most Popular 50,000 Sources in Feedly"
-        #})
+        topics.append({
+            "id": "topic/global.popular",
+            "label": "Most Popular 50,000 Sources in Feedly"
+        })
         raise ndb.Return(topics)
     def all_topics(self, use_mem=True):
         return self.all_topics_async(use_mem).get_result()
@@ -211,7 +213,6 @@ class Feedler(ndb.Model):
         self.access_token = access_token
         self.expires = expires
         self.is_pro = (plan == "pro")
-        self.is_authorized = True
 
         self.put()
 
@@ -256,7 +257,6 @@ class Feedler(ndb.Model):
         feedler.refresh_token = auth_data["refresh_token"]
         feedler.is_pro = (auth_data["plan"] == "pro")
         feedler.expires = expires
-        feedler.is_authorized = True
 
         feedler.put()
 
@@ -328,7 +328,8 @@ class FeedlerHandler(webapp2.RequestHandler):
         self.feedler = feedler
 
         #If they aren't logged in, then authenticate with Feedly
-        if feedler is None:
+        #Also, force authentication if requested in the URL
+        if feedler is None or self.request.get("force", "") == "auth":
             feedly = get_feedly_client()
             code_url = feedly.get_code_url(FEEDLY_REDIRECT_URI)
             self.redirect(code_url, abort=True)
@@ -403,10 +404,70 @@ class FeedlyAPI(object):
         '''return list of user subscriptions'''
         return self._make_call(self.fc.get_user_subscriptions)
     
-    def search_stream(self, streamId, newerThan, fields="", embedded="", enagement=""):
+    def search_stream(self, stream_id, query, newer_than, unread_only=False, fields="", embedded="", enagement="", locale=""):
         #/v3/search/contents
-        #TODO: Similar method to self.get_feed_content
-        pass
+        params = {
+            "query": query,
+            "streamId": stream_id,
+            "newerThan": newer_than
+        }
+        
+        #Add optional filters to the params
+        if fields != "":
+            params["fields"] = fields
+        if embedded != "":
+            params["embedded"] = embedded
+        if enagement != "":
+            params["enagement"] = enagement
+        if locale != "":
+            params["locale"] = locale
+
+        endpoint = "/v3/search/contents"
+
+        items = []
+        keep_going = True
+        continuation = ""
+        api_calls = 0
+
+        #This is for continuation
+        #Keep grabbing more items until all are grabbed
+        while keep_going and api_calls <= 20:
+
+            params["continuation"] = continuation
+
+            response = self._make_call(self.fc.get_endpoint, endpoint, params)
+            api_calls += 1
+
+            if "items" in response:
+                items.extend(response["items"])
+
+            #Do we need to keep going to get more results?
+            if "continuation" in response:
+                continuation = response["continuation"]
+            else:
+                continuation = ""
+
+            keep_going = (continuation != "")
+
+
+        #The search returns read items as well, so if they only want unread
+        #then remove read items
+        if unread_only:
+            items = [i for i in items if i["unread"]]
+
+        #If there was no continuation, then just return the response to keep
+        #all information intact
+        if api_calls == 1:
+            response["api_calls"] = api_calls
+            response["items"] = items
+            return response
+
+        #If multiple api calls occured, then all I care about is the items since
+        #the other information doesn't matter
+        return {
+            "items": items,
+            "api_calls": api_calls
+        }
 
     def get_feed_content(self, streamId, unreadOnly, newerThan, fields="", embedded="", enagement=""):
         '''return contents of a feed'''
