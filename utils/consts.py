@@ -21,6 +21,13 @@ ROOT = "http://localhost:8080/" if IS_DEV else "https://feedlytolinque.appspot.c
 #For development, Feedly Sandbox only allows the root to be used as a redirect
 FEEDLY_REDIRECT_URI = ROOT
 
+#How often should Triggers run in minutes
+RUN_TRIGGER_EVERY_MINUTE = 10
+
+#How many Triggers for the cron job to fetch at most
+#If you don't want a limit, set this to None
+TRIGGER_CRON_LIMIT = 100
+
 #Pre-joined path to reference HTML files
 HTML_FILE = os.path.join(os.path.dirname(__file__), "..", "site", "html", "{0}") + ".html"
 
@@ -37,19 +44,25 @@ def get_feedly_client(token=None):
 
 #Render the template using Django
 #This allows using Django 1.5 and {% verbatim %}
-def render_template(handler, page_name, params={}):
+def render_template(handler, page_name, params={}, trigger_template=None):
     from google.appengine.ext.webapp import template
     
     #Add params used in the templates
     params["root"] = handler.request.host_url
     params["js"] = params["css"] = ""
     params["page_name"] = page_name
-    params["is_dev"] = "true" if IS_DEV else "false"
+    params["is_dev"] = IS_DEV
 
     #Add another navbar dropdown on the development server
     #for easy access to the SDK console and dataviewer
     if IS_DEV:
         params["admin_root"] = secrets.DEV_ADMIN_ROOT
+
+    if trigger_template is not None:
+        trigger_path = HTML_FILE.format("triggers/%s" % trigger_template)
+        trigger_render = template.render(trigger_path, params)
+
+        params["trigger_fields"] = trigger_render
 
     #Render the page
     page_path = HTML_FILE.format(page_name)
@@ -132,6 +145,20 @@ def from_base62(st):
         idx += 1
 
     return num
+
+#Returns either None or an object given the urlsafe string of the key
+#If kind is not None, then only return the object if it's of that kind
+def get_by_key_urlsafe(urlsafekey, get=True):
+    try:
+        k = ndb.Key(urlsafe=urlsafekey)
+    except:
+        return None
+
+    #Either return the model or the ndb key
+    if get:
+        return k.get()
+
+    return k
 
 #The AES Encrypt/Decrypt class
 class Crypt:

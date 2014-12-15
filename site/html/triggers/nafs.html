@@ -1,4 +1,8 @@
-<b>INFORM THEM OF NON-PRO ACCOUNT LIMITATIONS</b>
+{% if not feedler.is_pro %}
+<div class="alert alert-warning text-justify">
+	<p>Non-pro Feedly users can only search through the last 30 days of history and are limited in the number of articles returned. You should think about <a href="https://{% if is_dev %}sandbox.{% endif %}feedly.com/i/pro/navbar" target="_blank">upgrading</a> to remove search restrictions and support Feedly!</p>
+</div>
+{% endif %}
 <div class="form-group">
 	<label>Source</label>
 	<select id="sourceFilter" class="form-control" name="source">

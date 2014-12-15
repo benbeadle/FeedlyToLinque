@@ -3,7 +3,7 @@
 #
 total_storage_limit: 500M
 queue:
-#- name: jotform
-#  rate: 1/s
-#  mode: push
-#  bucket_size: 5
+- name: trigger-run
+  rate: 50/s
+  mode: push
+  bucket_size: 50

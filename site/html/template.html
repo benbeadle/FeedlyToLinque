@@ -24,7 +24,7 @@
     }
     </style>
     <script type="text/javascript">
-        var IS_DEV = {{ is_dev }};
+        var IS_DEV = {% if is_dev %}true{% else %}false{% endif %};
     </script>
 </head>
 

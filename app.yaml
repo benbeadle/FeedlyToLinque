@@ -33,12 +33,24 @@ handlers:
   upload: favicon\.ico
 
 ################
+#   CRON JOBS  #
+################
+- url: /cron/trigger/queue
+  secure: always
+  script: handlers.cron.trigger_queue.app
+  login: admin
+
+################
+#    Queues    #
+################
+- url: /queue/trigger/run
+  secure: always
+  script: handlers.queue.trigger_run.app
+  login: admin
+
+################
 # WEB HANDLERS #
 ################
-#- url: /cron/logging_check
-#  script: handlers.cron.logging_check.app
-#  secure: always
-
 - url: /.*
   script: handlers.site.app
   secure: always

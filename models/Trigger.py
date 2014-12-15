@@ -55,8 +55,12 @@ class Trigger(polymodel.PolyModel):
 	@property
 	def feedler(self):
 		if self._feedler is None:
-			self._feedler = self.key.parent().get()
+			self._feedler = self.feedler_key.get()
 		return self._feedler
+
+	@property
+	def feedler_key(self):
+		return self.key.parent()
 
 	#This returns the last_run property into a timestamp that Feedly's
 	#API understances
@@ -89,24 +93,25 @@ class Trigger(polymodel.PolyModel):
 	#This method is so the subclasses don't need to worry
 	#about updating the last_run property saving code from being duplicated
 	def run_block(self, update_last=True):
-		result = self._run()
+
+		#Grab the newer_than property before saving
+		newer_than = self.newer_than
+
+		#Save the last_run property before running
+		#in case the run takes longer than the cron delay is
+		if update_last:
+			self.update_last_run()
+
+		result = self._run(newer_than)
 
 		#If there was an error, then disable the Trigger and email the Feedler
 		#But only disable if the error is not that the Feedly account is not long authorized
 		if "errorCode" in result and result["errorCode"] != 401:
 			message = result["errorMessage"] if "errorMessage" in result else ("Unknown Error: %d" % result["errorCode"])
 			self.enabled = False
+			self.put()
 
 			Emailer.trigger_error(self, message)
-
-			#If we are updating the last run, then no need to save it now
-			#since it'll be saved in update_last_run
-			#This reduces saves to the datastore
-			if not update_last:
-				self.put()
-
-		if update_last:
-			self.update_last_run()
 
 		return result
 
@@ -183,14 +188,14 @@ class SavedForLater(Trigger):
 	unsave = ndb.BooleanProperty('u', default=False, indexed=False)
 
 	#The custom method to call the Feedly api for this Trigger
-	def _run(self):
+	def _run(self, newer_than):
 		feedler = self.feedler
 		feedly_api = feedler.feedly_api
 
 		#Grab the saved for later list, only grabbing articles saved after the
 		#last time this was ran
 		saved_for_later_stream = feedler.get_global_saved()
-		data = feedler.feedly_api.get_feed_content(saved_for_later_stream, False, self.newer_than)
+		data = feedler.feedly_api.get_feed_content(saved_for_later_stream, False, newer_than)
 
 		#Keep processing if articles were found
 		item_len = 0 if "items" not in data else len(data["items"])
@@ -252,12 +257,12 @@ class NewCategoryArticle(Trigger):
 	category_id = ndb.StringProperty('ci', required=True, indexed=False)
 
 	#Custom run method for this Trigger type
-	def _run(self):
+	def _run(self, newer_than):
 		feedler = self.feedler
 		feedly_api = feedler.feedly_api
 
 		#Grab the articles from Feedly in the category
-		data = feedler.feedly_api.get_feed_content(self.category_id, True, self.newer_than)
+		data = feedler.feedly_api.get_feed_content(self.category_id, True, newer_than)
 
 		#Process the articles if some were found
 		item_len = 0 if "items" not in data else len(data["items"])
@@ -341,7 +346,7 @@ class NewArticleFromSearch(Trigger):
 		return self.source == "topic/global.popular"
 
 	#Run the Trigger to search for the articles
-	def _run(self):
+	def _run(self, newer_than):
 		feedler = self.feedler
 		feedly_api = feedler.feedly_api
 
@@ -352,7 +357,7 @@ class NewArticleFromSearch(Trigger):
 		only_unread = self.only_unread if not is_popular else False
 		locale = self.locale if is_popular else ""
 		
-		data = feedler.feedly_api.search_stream(self.source, self.feedly_query, self.newer_than,
+		data = feedler.feedly_api.search_stream(self.source, self.feedly_query, newer_than,
 			unread_only=only_unread, fields=self.fields, embedded=self.embedded,
 			enagement=self.engagement, locale=locale)
 

@@ -300,20 +300,13 @@ class FeedlerHandler(webapp2.RequestHandler):
             return None
         return self.feedler.key
 
-    def render_template(self, view_filename, params={}):
+    def render_template(self, view_filename, params={}, trigger_template=None):
         params["feedler"] = self.feedler
-        render_template(self, view_filename, params)
+        render_template(self, view_filename, params, trigger_template=trigger_template)
 
     def render_trigger(self, trigger_cls_id, editing, params={}):
-        from google.appengine.ext.webapp import template
-        
-        trigger_path = HTML_FILE.format("triggers/%s" % trigger_cls_id)
-        trigger_render = template.render(trigger_path, params)
-
-        params["trigger_fields"] = trigger_render
-        
         view_filename = "trigger_%s" % ("edit" if editing else "new")
-        self.render_template(view_filename, params)
+        self.render_template(view_filename, params, trigger_template=trigger_cls_id)
 
     def on_page(self, page):
         return self.request.path == ("/%s" % page)
